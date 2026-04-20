@@ -1,0 +1,72 @@
+# Default configuration for trajectory_subspace experiments.
+# Values are consumed by scripts/collect_activations.py,
+# scripts/analyze_subspaces.py, scripts/run_intervention.py, and
+# scripts/run_ar_baseline.py. Override via --config or --set key=value.
+
+model:
+  path: GSAI-ML/LLaDA-8B-Instruct
+  dtype: bfloat16
+  trust_remote_code: true
+
+# LLaDA reverse diffusion sampling settings used everywhere.
+sampling:
+  steps: 128
+  gen_length: 128
+  block_length: 32
+  temperature: 0.0
+  cfg_scale: 0.0
+  remasking: low_confidence
+  mask_id: 126336
+
+# Seeds used for repeated forward passes of the same prompt.
+seeds: [0, 1, 2, 3, 4]
+
+# Response-masked-fraction targets. For each (target, layer) cell, we capture
+# the nearest step whose ratio has just crossed the target from above.
+capture:
+  ratios: [0.95, 0.85, 0.70, 0.50, 0.30, 0.15, 0.05]
+  layers: [2, 8, 14, 20, 26, 30]
+  pooling: [response_mean, last_unmasked]
+
+# Sub-sampling for pilot runs.
+pilot:
+  max_prompts: 32
+  max_seeds: 2
+  include_full_hidden: false
+  include_gradient_subset: false
+
+# Full-scale runs. Gradient / token-level subsets are restricted to keep disk
+# usage tractable. Pooled tensors are always captured.
+full:
+  max_prompts: null
+  max_seeds: 5
+  include_full_hidden: true
+  full_hidden_max_prompts: 64
+  include_gradient_subset: true
+  gradient_max_prompts: 64
+
+# Analysis settings.
+analysis:
+  held_out_ratio: 0.2
+  variance_thresholds: [0.9, 0.95]
+  principal_angle_max_k: 32
+  null_baselines: [label_shuffle, length_match, topic_match]
+  seeds: [0, 1, 2]
+
+# Intervention settings consumed by run_intervention.py.
+intervention:
+  modes: [projection_ablation, steering, random_subspace_control]
+  k_dims: [1, 2, 4, 8]
+  steering_alphas: [-2.0, -1.0, 1.0, 2.0]
+
+# Storage layout. Relative paths are interpreted against the output root given
+# on the command line.
+io:
+  manifests_dir: manifests
+  generations_dir: generations
+  activations_dir: activations/pooled
+  token_level_dir: activations/token_level
+  gradient_dir: activations/gradient
+  analysis_dir: analysis
+  intervention_dir: intervention
+  shard_max_rows: 512
